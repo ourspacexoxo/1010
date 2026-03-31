@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Space 🤍</title>
+
+<!-- KEEP YOUR EXISTING STYLES (unchanged) -->
+<!-- I’m shortening here — DO NOT change your CSS -->
+<style>
+/* KEEP ALL YOUR ORIGINAL CSS HERE — unchanged */
+</style>
+</head>
+
+<body>
+
+<!-- KEEP ALL YOUR ORIGINAL HTML UI EXACTLY THE SAME -->
+<!-- (hero, cards, inputs, etc — NO CHANGES) -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Your full UI stays exactly as you wrote it -->
+
+<script>
+/* =========================================
+   🔥 CLEAN STATE (NO localStorage)
+========================================= */
+let movies = [];
+let questions = [];
+let savings = 0;
+let distance = '7,600 miles apart ᯓ ✈︎';
+
+/* =========================================
+   UI FUNCTIONS (UNCHANGED)
+========================================= */
+
+function renderList(containerId, arr, highlightIdx, type) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  arr.forEach((item, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'list-tag' + (i === highlightIdx ? ' highlighted' : '');
+    tag.dataset.value = item;
+
+    const label = document.createTextNode(item + ' ');
+    const btn = document.createElement('button');
+    btn.textContent = '×';
+    btn.onclick = () => removeItem(type, i);
+
+    tag.appendChild(label);
+    tag.appendChild(btn);
+    container.appendChild(tag);
+  });
+}
+
+function removeItem(type, index) {
+  if (type === 'movie') {
+    movies.splice(index, 1);
+    renderList('movieList', movies, -1, 'movie');
+    updateCountBadge('movieCount', movies.length, 'movie');
+  } else {
+    questions.splice(index, 1);
+    renderList('questionList', questions, -1, 'question');
+    updateCountBadge('questionCount', questions.length, 'question');
+  }
+  saveToFirebase();
+}
+
+function updateSavingsDisplay(animate) {
+  const el = document.getElementById('totalDisplay');
+  el.innerHTML = '<span>₹</span>' + savings;
+}
+
+function updateCountBadge(elId, count, type) {
+  const el = document.getElementById(elId);
+  const label = type === 'movie' ? 'movie' : 'question';
+  el.textContent = count > 0 ? count + ' ' + label + (count !== 1 ? 's' : '') : '';
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+/* =========================================
+   BUTTON FUNCTIONS (WILL BE OVERRIDDEN)
+========================================= */
+
+function addMovie() {}
+function addQuestion() {}
+function addMoney() {}
+
+</script>
+
+<!-- =========================================
+     🔥 FIREBASE (MAIN LOGIC)
+========================================= -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAigqBfuTlvCBpDCxzebbNH60asAwzXG9c",
+  authDomain: "ldr-39d20.firebaseapp.com",
+  projectId: "ldr-39d20",
+  storageBucket: "ldr-39d20.firebasestorage.app",
+  messagingSenderId: "832106604585",
+  appId: "1:832106604585:web:8fe3c6d57fe1fd75df5438"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db, "ourspace", "shared");
+
+/* 🔄 REALTIME SYNC */
+onSnapshot(docRef, (docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+
+    movies = data.movies || [];
+    questions = data.questions || [];
+    savings = data.savings || 0;
+
+    renderList('movieList', movies, -1, 'movie');
+    renderList('questionList', questions, -1, 'question');
+    updateSavingsDisplay(false);
+    updateCountBadge('movieCount', movies.length, 'movie');
+    updateCountBadge('questionCount', questions.length, 'question');
+  }
+});
+
+/* 💾 SAVE */
+async function saveToFirebase() {
+  await setDoc(docRef, {
+    movies,
+    questions,
+    savings
+  }, { merge: true });
+}
+
+/* 🎬 ADD MOVIE */
+window.addMovie = function () {
+  const input = document.getElementById('movieInput');
+  const val = input.value.trim();
+  if (!val) return;
+
+  movies.push(val);
+  input.value = '';
+
+  renderList('movieList', movies, -1, 'movie');
+  updateCountBadge('movieCount', movies.length, 'movie');
+
+  saveToFirebase();
+  showToast('🎬 Added!');
+};
+
+/* 💬 ADD QUESTION */
+window.addQuestion = function () {
+  const input = document.getElementById('questionInput');
+  const val = input.value.trim();
+  if (!val) return;
+
+  questions.push(val);
+  input.value = '';
+
+  renderList('questionList', questions, -1, 'question');
+  updateCountBadge('questionCount', questions.length, 'question');
+
+  saveToFirebase();
+  showToast('💬 Added!');
+};
+
+/* 💰 ADD MONEY */
+window.addMoney = function () {
+  const input = document.getElementById('moneyInput');
+  const val = parseFloat(input.value);
+  if (isNaN(val) || val <= 0) return;
+
+  savings += val;
+  input.value = '';
+
+  updateSavingsDisplay(true);
+
+  saveToFirebase();
+  showToast('💰 Added!');
+};
+</script>
+
+</body>
+</html>
