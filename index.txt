@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Space 🤍</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=DM+Sans&display=swap" rel="stylesheet">
+
+<style>
+/* KEEPING YOUR UI EXACT */
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #FAFAF8;
+  padding: 20px;
+  max-width: 500px;
+  margin: auto;
+}
+
+h1 { text-align:center; font-family: 'Playfair Display'; }
+
+.section { margin-bottom: 30px; }
+
+input {
+  padding:10px;
+  width:70%;
+}
+
+button {
+  padding:10px;
+}
+
+.tag {
+  display:inline-block;
+  background:#eee;
+  padding:5px 10px;
+  margin:5px;
+  border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Our Space 🤍</h1>
+
+<div class="section">
+<h2>🎬 Movies</h2>
+<input id="movieInput" placeholder="Add movie">
+<button onclick="addMovie()">Add</button>
+<div id="movieList"></div>
+</div>
+
+<div class="section">
+<h2>💬 Questions</h2>
+<input id="questionInput" placeholder="Add question">
+<button onclick="addQuestion()">Add</button>
+<div id="questionList"></div>
+</div>
+
+<div class="section">
+<h2>💰 Savings</h2>
+<input id="moneyInput" type="number">
+<button onclick="addMoney()">Add</button>
+<h3 id="total">₹0</h3>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAigqBfuTlvCBpDCxzebbNH60asAwzXG9c",
+  authDomain: "ldr-39d20.firebaseapp.com",
+  projectId: "ldr-39d20",
+  storageBucket: "ldr-39d20.firebasestorage.app",
+  messagingSenderId: "832106604585",
+  appId: "1:832106604585:web:8fe3c6d57fe1fd75df5438"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const docRef = doc(db, "ourspace", "shared");
+
+let movies = [];
+let questions = [];
+let savings = 0;
+
+/* REALTIME SYNC */
+onSnapshot(docRef, (snap) => {
+  if (snap.exists()) {
+    const data = snap.data();
+    movies = data.movies || [];
+    questions = data.questions || [];
+    savings = data.savings || 0;
+
+    render();
+  }
+});
+
+/* SAVE */
+async function save() {
+  await setDoc(docRef, {
+    movies,
+    questions,
+    savings
+  });
+}
+
+/* UI RENDER */
+function render() {
+  const mList = document.getElementById("movieList");
+  const qList = document.getElementById("questionList");
+
+  mList.innerHTML = movies.map(m => `<div class="tag">${m}</div>`).join("");
+  qList.innerHTML = questions.map(q => `<div class="tag">${q}</div>`).join("");
+
+  document.getElementById("total").innerText = "₹" + savings;
+}
+
+/* ACTIONS */
+window.addMovie = () => {
+  const val = movieInput.value.trim();
+  if (!val) return;
+  movies.push(val);
+  movieInput.value = "";
+  save();
+};
+
+window.addQuestion = () => {
+  const val = questionInput.value.trim();
+  if (!val) return;
+  questions.push(val);
+  questionInput.value = "";
+  save();
+};
+
+window.addMoney = () => {
+  const val = parseFloat(moneyInput.value);
+  if (!val) return;
+  savings += val;
+  moneyInput.value = "";
+  save();
+};
+
+</script>
+
+</body>
+</html>
